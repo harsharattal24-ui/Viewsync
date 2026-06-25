@@ -1,56 +1,80 @@
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Multi Video Viewer</title>
+
+<title>ViewSync</title>
 
 <style>
 body{
-    font-family:Arial;
-    text-align:center;
+    font-family:Arial,sans-serif;
     margin:20px;
+    text-align:center;
 }
 
 textarea{
-    width:90%;
-    height:100px;
+    width:95%;
+    height:150px;
+    padding:10px;
+}
+
+button{
+    padding:10px 15px;
+    margin:5px;
+    cursor:pointer;
 }
 
 #videos{
     display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
     gap:10px;
     margin-top:20px;
 }
 
-iframe{
+.player{
     width:100%;
     height:500px;
-    border:none;
 }
 </style>
 </head>
 <body>
 
-<h2>Multi Video Viewer</h2>
+<h1>ViewSync</h1>
 
-<p>Paste YouTube URLs or IDs (one per line)</p>
+<p>Paste one YouTube URL per line</p>
 
-<textarea id="links"></textarea><br>
+<textarea id="links" placeholder="https://youtube.com/watch?v=...
+https://youtube.com/shorts/..."></textarea>
+
+<br>
 
 <button onclick="loadVideos()">Load Videos</button>
+<button onclick="playAll()">▶ Play All</button>
+<button onclick="pauseAll()">⏸ Pause All</button>
+<button onclick="muteAll()">🔇 Mute All</button>
+<button onclick="unmuteAll()">🔊 Unmute All</button>
+<button onclick="toggleLoop()">🔁 Loop OFF</button>
 
 <div id="videos"></div>
 
+<script src="https://www.youtube.com/iframe_api"></script>
+
 <script>
-function getId(url){
 
-    if(url.includes("/shorts/"))
+let players = [];
+let loopEnabled = false;
+
+function getVideoId(url){
+
+    if(url.includes("/shorts/")){
         return url.split("/shorts/")[1].split("?")[0];
+    }
 
-    if(url.includes("v=")){
-        let m=url.match(/[?&]v=([^&]+)/);
-        if(m) return m[1];
+    let match = url.match(/[?&]v=([^&]+)/);
+
+    if(match){
+        return match[1];
     }
 
     return url.trim();
@@ -58,26 +82,132 @@ function getId(url){
 
 function loadVideos(){
 
-    let container=document.getElementById("videos");
-    container.innerHTML="";
+    document.getElementById("videos").innerHTML = "";
+    players = [];
 
-    let urls=document.getElementById("links")
+    let urls = document
+        .getElementById("links")
         .value
         .split("\n")
-        .filter(x=>x.trim()!="");
+        .filter(x => x.trim());
 
-    urls.forEach(url=>{
+    urls.forEach((url,index)=>{
 
-        let id=getId(url);
+        let id = getVideoId(url);
 
-        let iframe=document.createElement("iframe");
-        iframe.src=
-        "https://www.youtube.com/embed/"+id;
+        let div = document.createElement("div");
+        div.id = "player" + index;
+        div.className = "player";
 
-        iframe.allowFullscreen=true;
+        document
+            .getElementById("videos")
+            .appendChild(div);
 
-        container.appendChild(iframe);
+        players.push({
+            divId: div.id,
+            videoId: id
+        });
     });
+
+    createPlayers();
+}
+
+function createPlayers(){
+
+    players.forEach((p,i)=>{
+
+        players[i].instance =
+            new YT.Player(
+                p.divId,
+                {
+                    videoId:p.videoId,
+
+                    playerVars:{
+                        playsinline:1
+                    },
+
+                    events:{
+                        onStateChange:onPlayerStateChange
+                    }
+                }
+            );
+
+    });
+
+}
+
+function playAll(){
+
+    players.forEach(p=>{
+
+        if(p.instance){
+            p.instance.playVideo();
+        }
+
+    });
+
+}
+
+function pauseAll(){
+
+    players.forEach(p=>{
+
+        if(p.instance){
+            p.instance.pauseVideo();
+        }
+
+    });
+
+}
+
+function muteAll(){
+
+    players.forEach(p=>{
+
+        if(p.instance){
+            p.instance.mute();
+        }
+
+    });
+
+}
+
+function unmuteAll(){
+
+    players.forEach(p=>{
+
+        if(p.instance){
+            p.instance.unMute();
+        }
+
+    });
+
+}
+
+function toggleLoop(){
+
+    loopEnabled = !loopEnabled;
+
+    event.target.innerText =
+        loopEnabled
+        ? "🔁 Loop ON"
+        : "🔁 Loop OFF";
+
+}
+
+function onPlayerStateChange(event){
+
+    if(
+        loopEnabled &&
+        event.data === YT.PlayerState.ENDED
+    ){
+
+        event.target.seekTo(0);
+
+        event.target.playVideo();
+
+    }
+
 }
 </script>
 
