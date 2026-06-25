@@ -1,215 +1,280 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ViewSync - Multiple YouTube Shorts Viewer</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script src="https://code.jquery.com/jquery-1.8.1.min.js"></script>
+    <script src="https://www.youtube.com/iframe_api"></script>
 
-<title>ViewSync</title>
+    <style>
+        /* Core ViewSync Styling */
+        body {
+            font-family: 'Lato', sans-serif;
+            background-color: #121212;
+            color: #e0e0e0;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+        }
+        h1 { color: #fff; margin-bottom: 5px; }
+        h2 a { color: #ff4444; text-decoration: none; }
+        
+        .section {
+            background: #1e1e1e;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            border: 1px solid #333;
+        }
+        h3 { margin-top: 0; color: #aaa; }
+        
+        /* Step Blocks & Inputs */
+        .content { margin: 15px 0; }
+        .addButton {
+            background: #292929;
+            padding: 15px;
+            border: 2px dashed #555;
+            border-radius: 5px;
+            cursor: pointer;
+            display: inline-block;
+            margin-bottom: 15px;
+        }
+        .addButton:hover { border-color: #ff4444; color: #fff; }
+        
+        .inputState input, .generatedLinkWrapper input {
+            width: 80%;
+            padding: 10px;
+            background: #2a2a2a;
+            border: 1px solid #444;
+            color: #fff;
+            border-radius: 4px;
+            text-align: center;
+        }
 
-<style>
-body{
-    font-family:Arial,sans-serif;
-    margin:20px;
-    text-align:center;
-}
+        .button {
+            background: #ff4444;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            display: inline-block;
+            font-weight: bold;
+            margin: 10px 0;
+        }
+        .button:hover { background: #cc3333; }
 
-textarea{
-    width:95%;
-    height:150px;
-    padding:10px;
-}
+        /* Toggles mimicking original layout */
+        .wrapper { margin: 15px 0; text-align: left; max-width: 400px; margin: auto; }
+        .toggle { display: flex; align-items: center; margin: 10px 0; justify-content: space-between; }
+        .toggleDisplay { cursor: pointer; font-size: 1.2rem; width: 30px; }
+        .fa-check { color: #00ff00; }
+        .fa-times { color: #ff0000; }
+        .toggle--description { font-size: 0.85rem; color: #888; margin-left: 35px; margin-bottom: 15px; }
 
-button{
-    padding:10px 15px;
-    margin:5px;
-    cursor:pointer;
-}
-
-#videos{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
-    gap:10px;
-    margin-top:20px;
-}
-
-.player{
-    width:100%;
-    height:500px;
-}
-</style>
+        /* --- Dynamic Shorts Grid (Optimized for Vertical Ratio) --- */
+        #videoViewerGrid {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 30px;
+        }
+        .videoWrapper {
+            background: #000;
+            border: 2px solid #333;
+            border-radius: 8px;
+            overflow: hidden;
+            position: relative;
+            /* Vertical aspect ratio for Shorts (9:16 instead of 16:9) */
+            width: 280px;
+            height: 497px; 
+        }
+        .videoPlayer {
+            width: 100%;
+            height: 100%;
+        }
+        .removeVideo {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.7);
+            color: #fff;
+            padding: 5px 8px;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .removeVideo:hover { color: #ff4444; }
+    </style>
 </head>
-<body>
+<body ontouchstart="">
 
-<h1>ViewSync</h1>
+    <div id="header">
+        <h1>ViewSync Shorts</h1>
+        <h2>by <a href="#">Replica Project</a></h2>
+    </div>
 
-<p>Paste one YouTube URL per line</p>
+    <div class="section" id="step1">
+        <h3><span>Step 1:</span> Add Shorts</h3>
+        <div class="content">
+            <div id="addVideo" class="addButton">
+                <div class="container buttonState">
+                    <i class="fa fa-plus"></i> Add Video Slot
+                </div>
+            </div>
+            <div id="inputContainer">
+                </div>
+        </div>
+    </div>
 
-<textarea id="links" placeholder="https://youtube.com/watch?v=...
-https://youtube.com/shorts/..."></textarea>
+    <div class="section" id="step2">
+        <div class="button" id="testAudio">
+            <span>Step 2:</span> Test Audio / Sync
+        </div>
+    </div>
 
-<br>
+    <div class="section" id="step3">
+        <div class="wrapper">
+            <div class="button" id="generateLink">
+                <span>Step 3:</span> ViewSync!
+            </div>
+            
+            <hr style="border-color: #333; margin: 20px 0;">
 
-<button onclick="loadVideos()">Load Videos</button>
-<button onclick="playAll()">▶ Play All</button>
-<button onclick="pauseAll()">⏸ Pause All</button>
-<button onclick="muteAll()">🔇 Mute All</button>
-<button onclick="unmuteAll()">🔊 Unmute All</button>
-<button onclick="toggleLoop()">🔁 Loop OFF</button>
+            <div id="separateAudio" class="toggle">
+                <div class="label">Videos share audio</div>
+                <div class="toggleDisplay"><i class="fa fa-check"></i></div>
+            </div>
+            <div class="toggle--description">Enable to mute all videos except one</div>
 
-<div id="videos"></div>
+            <div id="autoplayVideos" class="toggle active">
+                <div class="label">Auto-buffer (breaks ads)</div>
+                <div class="toggleDisplay"><i class="fa fa-check"></i></div>
+            </div>
+            <div class="toggle--description">Enable to buffer videos immediately</div>
+        </div>
 
-<script src="https://www.youtube.com/iframe_api"></script>
+        <div class="wrapper generatedLinkWrapper" style="display:none;" id="linkOutputBlock">
+            <p>Your Multi-Shorts Stream Link:</p>
+            <input type="text" id="generatedLink" readonly value="">
+        </div>
+    </div>
 
-<script>
+    <div id="videoViewerGrid"></div>
 
-let players = [];
-let loopEnabled = false;
+    <div id="templates" style="display: none;">
+        <div class="videoWrapper" id="videoWrapper-{{id}}">
+            <div class="container button removeVideo" onclick="removeVideoSlot('{{id}}')">
+                <i class="fa fa-times"></i>
+            </div>
+            <div class="container videoPlayer" id="videoPlayer-{{id}}"></div>
+        </div>
+    </div>
 
-function getVideoId(url){
+    <script>
+        let videoCount = 0;
+        let players = [];
 
-    if(url.includes("/shorts/")){
-        return url.split("/shorts/")[1].split("?")[0];
-    }
-
-    let match = url.match(/[?&]v=([^&]+)/);
-
-    if(match){
-        return match[1];
-    }
-
-    return url.trim();
-}
-
-function loadVideos(){
-
-    document.getElementById("videos").innerHTML = "";
-    players = [];
-
-    let urls = document
-        .getElementById("links")
-        .value
-        .split("\n")
-        .filter(x => x.trim());
-
-    urls.forEach((url,index)=>{
-
-        let id = getVideoId(url);
-
-        let div = document.createElement("div");
-        div.id = "player" + index;
-        div.className = "player";
-
-        document
-            .getElementById("videos")
-            .appendChild(div);
-
-        players.push({
-            divId: div.id,
-            videoId: id
+        // Add input field on button click
+        $('#addVideo').click(function() {
+            videoCount++;
+            let inputHtml = `
+                <div class="container inputState" id="inputWrapper-${videoCount}" style="margin: 10px 0;">
+                    <input type="text" class="startAtInput" placeholder="Paste YouTube Shorts URL or ID" oninput="loadVideo(${videoCount}, this.value)">
+                </div>
+            `;
+            $('#inputContainer').append(inputHtml);
         });
-    });
 
-    createPlayers();
-}
+        // Extract YouTube Video ID from regular URLs or Shorts URLs
+        function extractVideoId(url) {
+            let regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=|shorts\/)([^#\&\?]*).*/;
+            let match = url.match(regExp);
+            return (match && match[2].length == 11) ? match[2] : url;
+        }
 
-function createPlayers(){
+        // Dynamically load video templates into the viewing frame grid
+        function loadVideo(id, value) {
+            let videoId = extractVideoId(value);
+            if (videoId.length !== 11) return; // Wait until valid ID is passed
 
-    players.forEach((p,i)=>{
+            // Check if slot wrapper already exists, if not construct it from hidden blueprint template
+            if ($(`#videoWrapper-${id}`).length === 0) {
+                let template = $('#templates').html().replace(/{{id}}/g, id);
+                $('#videoViewerGrid').append(template);
+            }
 
-        players[i].instance =
-            new YT.Player(
-                p.divId,
-                {
-                    videoId:p.videoId,
-
-                    playerVars:{
-                        playsinline:1
-                    },
-
-                    events:{
-                        onStateChange:onPlayerStateChange
-                    }
+            // Initialize YouTube Player via standard API iframe injection wrapper
+            players[id] = new YT.Player(`videoPlayer-${id}`, {
+                videoId: videoId,
+                playerVars: {
+                    'autoplay': 0,
+                    'controls': 1,
+                    'modestbranding': 1,
+                    'rel': 0
                 }
-            );
-
-    });
-
-}
-
-function playAll(){
-
-    players.forEach(p=>{
-
-        if(p.instance){
-            p.instance.playVideo();
+            });
         }
 
-    });
-
-}
-
-function pauseAll(){
-
-    players.forEach(p=>{
-
-        if(p.instance){
-            p.instance.pauseVideo();
+        function removeVideoSlot(id) {
+            $(`#videoWrapper-${id}`).remove();
+            $(`#inputWrapper-${id}`).remove();
         }
 
-    });
+        // Step 2 Control logic (Simultaneous playback start)
+        $('#testAudio').click(function() {
+            Object.values(players).forEach(player => {
+                if(player && typeof player.playVideo === 'function') {
+                    player.playVideo();
+                }
+            });
+        });
 
-}
+        // Step 3 Control logic (Generate custom sharing hash)
+        $('#generateLink').click(function() {
+            let ids = [];
+            $('.startAtInput').each(function() {
+                let val = extractVideoId($(this).val());
+                if(val) ids.push(val);
+            });
 
-function muteAll(){
+            if (ids.length > 0) {
+                let currentUrl = window.location.href.split('?')[0];
+                let generatedUrl = `${currentUrl}?v=${ids.join(',')}`;
+                $('#generatedLink').val(generatedUrl);
+                $('#linkOutputBlock').show();
+            }
+        });
 
-    players.forEach(p=>{
+        // Toggle elements visual feedback handler
+        $('.toggleDisplay').click(function() {
+            let icon = $(this).find('i');
+            if(icon.hasClass('fa-check')) {
+                icon.removeClass('fa-check').addClass('fa-times');
+            } else {
+                icon.removeClass('fa-times').addClass('fa-check');
+            }
+        });
 
-        if(p.instance){
-            p.instance.mute();
-        }
-
-    });
-
-}
-
-function unmuteAll(){
-
-    players.forEach(p=>{
-
-        if(p.instance){
-            p.instance.unMute();
-        }
-
-    });
-
-}
-
-function toggleLoop(){
-
-    loopEnabled = !loopEnabled;
-
-    event.target.innerText =
-        loopEnabled
-        ? "🔁 Loop ON"
-        : "🔁 Loop OFF";
-
-}
-
-function onPlayerStateChange(event){
-
-    if(
-        loopEnabled &&
-        event.data === YT.PlayerState.ENDED
-    ){
-
-        event.target.seekTo(0);
-
-        event.target.playVideo();
-
-    }
-
-}
-</script>
-
+        // Automatically parse URL parameters on load to reconstruct shared viewsync grids
+        window.onload = function() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const videos = urlParams.get('v');
+            if (videos) {
+                let idList = videos.split(',');
+                idList.forEach((vId, index) => {
+                    let slotId = index + 1;
+                    $('#addVideo').click();
+                    let inputField = $(`.inputState:last-child input`);
+                    inputField.val(vId);
+                    loadVideo(slotId, vId);
+                });
+            }
+        };
+    </script>
 </body>
 </html>
