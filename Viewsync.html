@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multi Video Viewer</title>
+
+<style>
+body{
+    font-family:Arial;
+    text-align:center;
+    margin:20px;
+}
+
+textarea{
+    width:90%;
+    height:100px;
+}
+
+#videos{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(300px,1fr));
+    gap:10px;
+    margin-top:20px;
+}
+
+iframe{
+    width:100%;
+    height:500px;
+    border:none;
+}
+</style>
+</head>
+<body>
+
+<h2>Multi Video Viewer</h2>
+
+<p>Paste YouTube URLs or IDs (one per line)</p>
+
+<textarea id="links"></textarea><br>
+
+<button onclick="loadVideos()">Load Videos</button>
+
+<div id="videos"></div>
+
+<script>
+function getId(url){
+
+    if(url.includes("/shorts/"))
+        return url.split("/shorts/")[1].split("?")[0];
+
+    if(url.includes("v=")){
+        let m=url.match(/[?&]v=([^&]+)/);
+        if(m) return m[1];
+    }
+
+    return url.trim();
+}
+
+function loadVideos(){
+
+    let container=document.getElementById("videos");
+    container.innerHTML="";
+
+    let urls=document.getElementById("links")
+        .value
+        .split("\n")
+        .filter(x=>x.trim()!="");
+
+    urls.forEach(url=>{
+
+        let id=getId(url);
+
+        let iframe=document.createElement("iframe");
+        iframe.src=
+        "https://www.youtube.com/embed/"+id;
+
+        iframe.allowFullscreen=true;
+
+        container.appendChild(iframe);
+    });
+}
+</script>
+
+</body>
+</html>
